@@ -1,5 +1,3 @@
-import React from "react";
-
 const sounds = {
   add: "/sounds/add.mp3",
   complete: "/sounds/complete.mp3",
@@ -7,7 +5,10 @@ const sounds = {
   update: "/sounds/update.mp3",
 };
 
+const soundsEnabled = import.meta.env.VITE_ENABLE_SOUNDS !== "false";
+
 export const playSound = (type) => {
+  if (!soundsEnabled) return;
   const sound = sounds[type];
   if (!sound) return;
   const audio = new Audio(sound);

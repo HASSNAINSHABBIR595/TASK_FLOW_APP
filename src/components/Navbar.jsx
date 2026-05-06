@@ -3,7 +3,7 @@ import { IoIosTrendingUp } from "react-icons/io";
 
 const Navbar = ({ progress, active }) => {
   return (
-    <div className="navbar backdrop-blur-2xl bg-white/5 rounded-3xl border border-white/10 p-6 mb-4 shadow-2xl">
+    <div className="navbar bg-white/5 rounded-3xl border border-white/10 p-6 mb-4 shadow-xl">
       <div className="flex items-center justify-between mb-4">
         {/* left side here */}
         <div className="flex items-center gap-3 ">
@@ -11,7 +11,7 @@ const Navbar = ({ progress, active }) => {
             <div className="w-12 h-12 bg-linear-to-br from-violet-500 via-purple-500 to-fuchsia-500 rounded-2xl flex items-center justify-center shadow-lg">
               <HiOutlineSparkles className="text-white " size={24} />
             </div>
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-400 rounded-full animate-ping"></div>
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-400 rounded-full"></div>
           </div>
           <div>
             <h1 className="text-3xl font-black text-white tracking-tight ">

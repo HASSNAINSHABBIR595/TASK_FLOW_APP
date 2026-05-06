@@ -21,7 +21,7 @@ const TodoItem = ({
 
   return (
     <div
-      className={`todo-item group backdrop-blur-2xl bg-white/5 hover:bg-white/10 rounded-xl p-3 flex items-center gap-3 border border-white/10 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-purple-500/10 ${todo.completed ? "opacity-50" : ""}`}
+      className={`todo-item group bg-white/5 hover:bg-white/10 rounded-xl p-3 flex items-center gap-3 border border-white/10 transition-colors duration-300 ${todo.completed ? "opacity-50" : ""}`}
       style={{
         animation: `slideIn 0.4s ease-out ${index * 0.05}s backwards`,
       }}

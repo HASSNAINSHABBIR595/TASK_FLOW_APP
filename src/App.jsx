@@ -1,103 +1,145 @@
-import AnimateBg from "./components/AnimateBg";
 import Notification from "./components/Notification";
 import Navbar from "./components/Navbar";
 import StatsGrid from "./components/StatsGrid";
 import Input from "./components/Input";
 import TodoList from "./components/TodoList";
 import ClearButton from "./components/ClearButton";
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { playSound } from "./components/PlaySound";
 
+const STORAGE_KEY = "todos";
+const MAX_TODO_LENGTH = 160;
+const AnimateBg = lazy(() => import("./components/AnimateBg"));
+
+const isValidTodo = (todo) =>
+  todo &&
+  (typeof todo.id === "string" || typeof todo.id === "number") &&
+  typeof todo.text === "string" &&
+  typeof todo.completed === "boolean";
+
+const parseStoredTodos = (storedValue) => {
+  if (!storedValue) return [];
+  const parsed = JSON.parse(storedValue);
+  if (!Array.isArray(parsed)) return [];
+  return parsed.filter(isValidTodo).map((todo) => ({
+    ...todo,
+    text: todo.text.slice(0, MAX_TODO_LENGTH),
+  }));
+};
+
 const App = () => {
-  const [todos, setTodos] = useState([]);
+  const [todos, setTodos] = useState(() => {
+    try {
+      return parseStoredTodos(localStorage.getItem(STORAGE_KEY));
+    } catch {
+      return [];
+    }
+  });
   const [input, setInput] = useState("");
   const [notification, setNotification] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState("");
-  const [hasLoaded, setHasLoaded] = useState(false);
+  const [showDecorations, setShowDecorations] = useState(false);
+  const notificationTimeoutRef = useRef(null);
   const totalTodos = todos.length;
   const completedCount = todos.filter((t) => t.completed).length;
   const activeCount = totalTodos - completedCount;
   const progress = todos.length > 0 ? (completedCount / todos.length) * 100 : 0;
 
-  // save to localStorage //
-  const STORAGE_KEY = "todos";
   useEffect(() => {
-    if (!hasLoaded) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
-    } catch (error) {
-      console.log("Error saving to localStorage", error);
+    } catch {
+      // Ignore storage quota/private mode write errors.
     }
-  }, [todos, hasLoaded]);
+  }, [todos]);
 
-  // get from localStorage //
-  useEffect(() => {
-    try {
-      const data = localStorage.getItem(STORAGE_KEY);
-      if (data) {
-        setTodos(JSON.parse(data));
+  useEffect(
+    () => () => {
+      if (notificationTimeoutRef.current) {
+        clearTimeout(notificationTimeoutRef.current);
       }
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setHasLoaded(true);
-    }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    if (prefersReducedMotion) return;
+
+    const enableDecorations = () => setShowDecorations(true);
+    const idleCallback =
+      window.requestIdleCallback?.(enableDecorations, { timeout: 1500 }) ??
+      window.setTimeout(enableDecorations, 200);
+
+    return () => {
+      if (window.cancelIdleCallback && typeof idleCallback === "number") {
+        window.cancelIdleCallback(idleCallback);
+      } else {
+        clearTimeout(idleCallback);
+      }
+    };
   }, []);
 
-  // show notification //
   const showNotification = (message, type = "success") => {
+    if (notificationTimeoutRef.current) {
+      clearTimeout(notificationTimeoutRef.current);
+    }
     setNotification({ message, type });
-    setTimeout(() => {
+    notificationTimeoutRef.current = setTimeout(() => {
       setNotification(null);
     }, 3000);
   };
-  // function add todo //
+
   const handleAddTodo = () => {
-    if (!input.trim()) return;
+    const nextText = input.trim().slice(0, MAX_TODO_LENGTH);
+    if (!nextText) return;
 
     const newTodo = {
       id: Date.now(),
-      text: input,
+      text: nextText,
       completed: false,
       createdAt: new Date().toISOString(),
     };
 
-    setTodos([newTodo, ...todos]);
+    setTodos((prev) => [newTodo, ...prev]);
     setInput("");
     playSound("add");
     showNotification("✨ Task Added Successfully!");
   };
-  // StartEditing function //
+
   const startEditing = (id, text) => {
     setEditingId(id);
-    setEditText(text);
-    console.log("editing started", id, text);
+    setEditText((text ?? "").slice(0, MAX_TODO_LENGTH));
   };
-  // update todo logic //
+
   const saveEdit = (id) => {
-    if (!editText.trim()) return;
+    const nextText = editText.trim().slice(0, MAX_TODO_LENGTH);
+    if (!nextText) return;
+
     setTodos(
-      todos.map((todo) =>
-        todo.id === id ? { ...todo, text: editText } : todo,
-      ),
+      (prev) =>
+        prev.map((todo) =>
+          todo.id === id ? { ...todo, text: nextText } : todo,
+        ),
     );
     setEditText("");
     setEditingId(null);
     playSound("update");
     showNotification("Task Updated Successfully!");
   };
-  // cancel edit function here //
+
   const cancelEdit = () => {
     setEditText("");
     setEditingId(null);
   };
-  // handle edit text change here //
 
   const handleEditTextChange = (e) => {
-    setEditText(e.target.value);
+    setEditText(e.target.value.slice(0, MAX_TODO_LENGTH));
   };
-  // handleedit key press here //
 
   const handleEditKeyPress = (e, id) => {
     if (e.key === "Enter") {
@@ -107,41 +149,40 @@ const App = () => {
     }
   };
 
-  // delete todo logic //
   const deleteTodo = (id) => {
-    setTodos(todos.filter((todos) => todos.id !== id));
+    setTodos((prev) => prev.filter((todo) => todo.id !== id));
     playSound("delete");
     showNotification("🗑️ Task Deleted", "info");
   };
 
-  // handle toggle here //
   const handleToggle = (id) => {
+    const targetTodo = todos.find((todo) => todo.id === id);
     setTodos(
-      todos.map((todo) =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo,
-      ),
+      (prev) =>
+        prev.map((todo) =>
+          todo.id === id ? { ...todo, completed: !todo.completed } : todo,
+        ),
     );
-    const todo = todos.find((t) => t.id === id);
-    if (!todo.completed) {
+
+    if (targetTodo && !targetTodo.completed) {
       playSound("complete");
       showNotification("🎉 Great Job! Task Completed");
     }
   };
 
-  // clear all completed task //
   const clearCompleted = () => {
-    setTodos(todos.filter((t) => !t.completed));
+    setTodos((prev) => prev.filter((todo) => !todo.completed));
     playSound("delete");
-    showNotification("🗑️ Task Deleted", "info");
+    showNotification("🗑️ Completed Tasks Cleared", "info");
   };
 
   return (
-    <div
-      className="w-full h-screen overflow-auto
-    bg-linear-to-br from-indigo-950 via-purple-950 to-pink-950  
-    p-3 sm:p-6 relative  "
-    >
-      <AnimateBg />
+    <div className="w-full h-screen overflow-auto bg-linear-to-br from-indigo-950 via-purple-950 to-pink-950 p-3 sm:p-6 relative">
+      {showDecorations ? (
+        <Suspense fallback={null}>
+          <AnimateBg />
+        </Suspense>
+      ) : null}
       <Notification
         notification={notification}
         onClose={() => setNotification(null)}
@@ -157,7 +198,7 @@ const App = () => {
 
         <Input
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => setInput(e.target.value.slice(0, MAX_TODO_LENGTH))}
           onAdd={handleAddTodo}
         />
 
@@ -176,30 +217,6 @@ const App = () => {
 
         <ClearButton completedTodos={completedCount} onClick={clearCompleted} />
       </div>
-      <style>
-        {`
-          @keyframes slideIn {
-            from {
-              ocapity: 0;
-              transform:translateY(20px)
-            }
-            to {
-              opacity:1;
-              transform:translateY(0)
-            }
-          }
-          @keyframes float{
-            0%,100% {transform:translateY(0px) translateX(0px);}
-            50%{transform:translateY(-20px) translateX(10px);}
-          }
-          @keyframes shimmer {
-            0%{ transform:translateX(-100%);}
-            100% {transform :translateX(100%);}
-          }
-          .animate-shimmer{
-            Animation : shimmer 2s infinite
-          }`}
-      </style>
     </div>
   );
 };

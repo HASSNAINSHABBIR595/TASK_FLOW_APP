@@ -1,16 +1,36 @@
-# React + Vite
+# Task Flow App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern todo app built with React + Vite + Tailwind.
 
-Currently, two official plugins are available:
+## Scripts
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- `npm run dev` - Start local development server.
+- `npm run lint` - Run ESLint checks.
+- `npm run test` - Run unit tests once (CI mode).
+- `npm run test:watch` - Run tests in watch mode.
+- `npm run build` - Create production build in `dist`.
+- `npm run preview` - Preview production build locally.
 
-## React Compiler
+## Environment Variables
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Copy `.env.example` to `.env` and adjust values as needed:
 
-## Expanding the ESLint configuration
+- `VITE_ENABLE_SOUNDS=true` - Set to `false` to disable UI sound playback.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Production Readiness Checklist
+
+- Run `npm ci` for reproducible installs.
+- Run `npm run lint && npm run test && npm run build` before deploy.
+- Ensure your hosting platform serves the generated `dist` folder.
+- Keep `package-lock.json` committed for deterministic CI builds.
+
+## CI
+
+GitHub Actions workflow is available at `.github/workflows/ci.yml` and runs:
+
+1. install (`npm ci`)
+2. lint
+3. test
+4. build
+
+This blocks broken code from being merged/deployed.
