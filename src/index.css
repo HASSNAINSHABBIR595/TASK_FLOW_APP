@@ -1,0 +1,12 @@
+@import "tailwindcss";
+.navbar {
+  user-select: none;
+}
+
+.stats-grid {
+  user-select: none;
+}
+
+.todo-item {
+  user-select: none;
+}
